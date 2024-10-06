@@ -31,6 +31,7 @@ async function run() {
     const reviewCollection = client.db("delmartDB").collection("reviews");
     const cartCollection = client.db("delmartDB").collection("carts");
     const userCollection = client.db("delmartDB").collection("users");
+    const paymentCollection = client.db("delmartDB").collection("payments");
 
     //  jwt post Api
 
@@ -231,6 +232,55 @@ async function run() {
 
       res.send({
         clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      //  deffent Thing
+      // console.log("check payment History", payment);
+
+      const query = {
+        _id: {
+          $in: payment.cartIds.map((id) => new ObjectId(id)),
+        },
+      };
+
+      const deleteResult = await cartCollection.deleteMany(query);
+
+      res.send({ paymentResult, deleteResult });
+    });
+
+    // Get Method Used Payments History get api,
+
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      // const email = req.params.email;
+      const query = { email: req.params.email };
+
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+
+      const result = await paymentCollection.find(query).toArray();
+
+      res.send(result);
+    });
+
+    //Payment or Admin dashboard Show, Some Info
+    app.get("/admin-stats", async (req, res) => {
+      const customers = await userCollection.estimatedDocumentCount();
+      const menuItems = await allMenuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+      const payments = await paymentCollection.find().toArray();
+      const revenue = payments.reduce((pre, current) => pre + current.price, 0);
+
+      res.send({
+        customers,
+        menuItems,
+        orders,
+        revenue,
       });
     });
 
