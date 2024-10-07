@@ -269,12 +269,28 @@ async function run() {
     });
 
     //Payment or Admin dashboard Show, Some Info
-    app.get("/admin-stats", async (req, res) => {
+    app.get("/admin-stats", verifyToken, veryfyAdmin, async (req, res) => {
       const customers = await userCollection.estimatedDocumentCount();
       const menuItems = await allMenuCollection.estimatedDocumentCount();
       const orders = await paymentCollection.estimatedDocumentCount();
-      const payments = await paymentCollection.find().toArray();
-      const revenue = payments.reduce((pre, current) => pre + current.price, 0);
+
+      // const payments = await paymentCollection.find().toArray();
+      // const revenue = payments.reduce((pre, current) => pre + current.price, 0);
+
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevenue: {
+                $sum: "$price",
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      const revenue = result.length > 0 ? result[0].totalRevenue : 0;
 
       res.send({
         customers,
@@ -282,6 +298,71 @@ async function run() {
         orders,
         revenue,
       });
+    });
+
+    // specific or deffient way, data get , example ,, saled, pizza,total cel, and price
+
+    const { ObjectId } = require("mongodb");
+
+    app.get("/orders-stats", async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          // Step 1: Convert menuItemIds to ObjectId (if needed)
+          {
+            $addFields: {
+              menuItemIds: {
+                $map: {
+                  input: "$menuItemIds",
+                  as: "id",
+                  in: { $toObjectId: "$$id" }, // Convert each ID to ObjectId
+                },
+              },
+            },
+          },
+
+          // Step 2: Unwind menuItemIds array
+          {
+            $unwind: "$menuItemIds",
+          },
+
+          // Step 3: Lookup menu item details from the "menu" collection
+          {
+            $lookup: {
+              from: "menu", // Collection to join (menu items)
+              localField: "menuItemIds", // Field from the 'orders' collection
+              foreignField: "_id", // Matching field from the 'menu' collection
+              as: "menuItems", // Output field for matched menu items
+            },
+          },
+
+          // Step 4: Unwind the menuItems array (in case lookup returns an array)
+          {
+            $unwind: "$menuItems",
+          },
+
+          // Step 5: Group by menu category and calculate quantity and revenue
+          {
+            $group: {
+              _id: "$menuItems.category", // Group by category
+              quantity: {
+                $sum: 1, // Count items
+              },
+              revenue: { $sum: "$menuItems.price" }, // Sum the revenue
+            },
+          },
+
+          {
+            $project: {
+              _id: 0,
+              category: "$_id",
+              quantity: "$quantity",
+              revenue: "$revenue",
+            },
+          },
+        ])
+        .toArray();
+
+      res.send(result);
     });
 
     //  put method use
