@@ -13,7 +13,7 @@ app.use(express.json());
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.so5yg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-console.log(uri);
+// console.log(uri);
 // const uri = "mongodb://localhost:27017";
 // console.log(uri);
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -32,6 +32,12 @@ async function run() {
     const cartCollection = client.db("delmartDB").collection("carts");
     const userCollection = client.db("delmartDB").collection("users");
     const paymentCollection = client.db("delmartDB").collection("payments");
+    const categoriesCollection = client
+      .db("delmartDB")
+      .collection("categories");
+    const allCategoryCollection = client.db("delmartDB").collection("category");
+
+    const allShopsCollection = client.db("delmartDB").collection("shops");
 
     //  jwt post Api
 
@@ -78,6 +84,58 @@ async function run() {
       next();
     };
 
+    // ========================== Start Point
+    // Category APi
+    app.get("/category", async (req, res) => {
+      const result = await categoriesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Id Data load
+    app.get("/category/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await allCategoryCollection.findOne(query);
+      // console.log(result);
+      res.send(result);
+    });
+
+    // Each CateGory Check Movement API ?
+    app.get("/eachCategory/:category", async (req, res) => {
+      const category = req.params.category;
+      const query = { category: category };
+      const allCategory = await allCategoryCollection.find(query).toArray();
+      res.send(allCategory);
+    });
+
+    // All Getegory Api
+    app.get("/allCategory", async (req, res) => {
+      const result = await allCategoryCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/shops", async (req, res) => {
+      const shops = req.body;
+      const result = await allShopsCollection.insertOne(shops);
+      res.send(result);
+    });
+
+    app.get("/shops", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await allShopsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/shops/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await allShopsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // ========================== End Point
+
     // user post method api create it use Google Authantication need
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -86,7 +144,7 @@ async function run() {
       // console.log(existedEmail, query);
       if (existedEmail) {
         return res.send({
-          message: "Your Email Alrady Store",
+          message: "Your Email Alrady Stored",
           insertedId: null,
         });
       }
@@ -302,9 +360,7 @@ async function run() {
 
     // specific or deffient way, data get , example ,, saled, pizza,total cel, and price
 
-    const { ObjectId } = require("mongodb");
-
-    app.get("/orders-stats", async (req, res) => {
+    app.get("/orders-stats", verifyToken, veryfyAdmin, async (req, res) => {
       const result = await paymentCollection
         .aggregate([
           // Step 1: Convert menuItemIds to ObjectId (if needed)
@@ -364,6 +420,45 @@ async function run() {
 
       res.send(result);
     });
+
+    // app.get("/orders-stats", async (req, res) => {
+    //   try {
+    //     const result = await paymentCollection
+    //       .aggregate([
+    //         { $unwind: "$menuItemIds" },
+    //         {
+    //           $lookup: {
+    //             from: "menu",
+    //             localField: "menuItemIds",
+    //             foreignField: "_id",
+    //             as: "menuItems",
+    //           },
+    //         },
+    //         { $unwind: "$menuItems" },
+    //         {
+    //           $group: {
+    //             _id: "$menuItems.category",
+    //             quantity: { $sum: 1 },
+    //             revenue: { $sum: "$menuItems.price" },
+    //           },
+    //         },
+    //         {
+    //           $project: {
+    //             _id: 0,
+    //             category: "$_id",
+    //             quantity: "$quantity",
+    //             revenue: "$revenue",
+    //           },
+    //         },
+    //       ])
+    //       .toArray();
+
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error in orders-stats aggregation:", error);
+    //     res.status(500).send({ error: "Internal Server Error" });
+    //   }
+    // });
 
     //  put method use
 
