@@ -38,7 +38,7 @@ async function run() {
     const allCategoryCollection = client.db("delmartDB").collection("category");
 
     const allShopsCollection = client.db("delmartDB").collection("shops");
-
+    const wishlistCollection = client.db("delmartDB").collection("wishlist");
     //  jwt post Api
 
     app.post("/jwt", async (req, res) => {
@@ -108,12 +108,25 @@ async function run() {
       res.send(allCategory);
     });
 
-    // All Getegory Api
+    // All Getegory Api Pagination System
+    app.get("/allCategory/pagination", verifyToken, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      // console.log(page, size);
+      const result = await allCategoryCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
+    // All Product Get s
+
     app.get("/allCategory", async (req, res) => {
       const result = await allCategoryCollection.find().toArray();
       res.send(result);
     });
-
     app.post("/shops", async (req, res) => {
       const shops = req.body;
       const result = await allShopsCollection.insertOne(shops);
@@ -131,6 +144,28 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await allShopsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // for Pagination Use Api
+    app.get("/shopCount", async (req, res) => {
+      const count = await allCategoryCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+
+    // Post WishList Collection
+
+    app.post("/wishlist", async (req, res) => {
+      const wishlistInfo = req.body;
+      const result = await wishlistCollection.insertOne(wishlistInfo);
+      res.send(result);
+    });
+
+    // Get WishList Collect Just check true
+    app.get("/wishlist", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await wishlistCollection.find(query).toArray();
       res.send(result);
     });
 
