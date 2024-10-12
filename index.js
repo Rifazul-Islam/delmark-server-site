@@ -140,6 +140,18 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/shops/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateInfo = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: updateInfo,
+      };
+
+      const result = await allShopsCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
     app.delete("/shops/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -169,6 +181,12 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/wishlist/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await wishlistCollection.deleteOne(query);
+      res.send(result);
+    });
     // ========================== End Point
 
     // user post method api create it use Google Authantication need
