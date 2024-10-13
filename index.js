@@ -330,6 +330,8 @@ async function run() {
       res.send(result);
     });
 
+    // ===== payment system Emplement Start =======
+
     // Payment Post Method Intern
     app.post("/create-payment-intern", async (req, res) => {
       const { price } = req.body;
@@ -359,7 +361,7 @@ async function run() {
         },
       };
 
-      const deleteResult = await cartCollection.deleteMany(query);
+      const deleteResult = await allShopsCollection.deleteMany(query);
 
       res.send({ paymentResult, deleteResult });
     });
@@ -473,6 +475,8 @@ async function run() {
 
       res.send(result);
     });
+
+    // ===== payment system Emplement End Poin =======
 
     // app.get("/orders-stats", async (req, res) => {
     //   try {
