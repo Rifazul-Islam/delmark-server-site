@@ -108,17 +108,39 @@ async function run() {
       res.send(allCategory);
     });
 
-    // All Getegory Api Pagination System
+    // // All Getegory Api Pagination System
+    // app.get("/allCategory/pagination", verifyToken, async (req, res) => {
+    //   const page = parseInt(req.query.page);
+    //   const size = parseInt(req.query.size);
+    //   // console.log(page, size);
+    //   const result = await allCategoryCollection
+    //     .find()
+    //     .skip(page * size)
+    //     .limit(size)
+    //     .toArray();
+    //   res.send(result);
+    // });
+
+    // All Category API with Pagination and Sorting
     app.get("/allCategory/pagination", verifyToken, async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      // console.log(page, size);
-      const result = await allCategoryCollection
-        .find()
-        .skip(page * size)
-        .limit(size)
-        .toArray();
-      res.send(result);
+      const page = parseInt(req.query.page) || 0;
+      const size = parseInt(req.query.size) || 10;
+      const sortField = req.query.sortField || "price"; // Default sorting field
+      const sortOrder = req.query.sortOrder === "desc" ? -1 : 1; // Default sorting order (1 for ascending, -1 for descending)
+
+      try {
+        const result = await allCategoryCollection
+          .find()
+          .sort({ [sortField]: sortOrder }) // Apply sorting
+          .skip(page * size) // Skip documents for pagination
+          .limit(size) // Limit the number of documents
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        res.status(500).send("Failed to fetch data");
+      }
     });
 
     // All Product Get s
@@ -381,6 +403,13 @@ async function run() {
       res.send(result);
     });
 
+    // Get Method Used Payments History get api all M,
+
+    app.get("/payments", verifyToken, async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+
     //Payment or Admin dashboard Show, Some Info
     app.get("/admin-stats", verifyToken, veryfyAdmin, async (req, res) => {
       const customers = await userCollection.estimatedDocumentCount();
@@ -473,6 +502,19 @@ async function run() {
         ])
         .toArray();
 
+      res.send(result);
+    });
+
+    app.patch("/payments/:id", async (req, res) => {
+      const id = req.params.id;
+      const statusUpdate = req.body;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: statusUpdate,
+      };
+
+      const result = await paymentCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
